@@ -48,7 +48,8 @@ func createTable(db *sql.DB) {
 
 	_, err := db.Exec(query)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Erro ao criar tabela no banco de dados", err)
+		return
 	}
 }
 
@@ -63,11 +64,13 @@ func handleCotacao(w http.ResponseWriter, db *sql.DB) {
 		nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Erro ao criar requisição: %v\n", err)
+		return
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Erro ao fazer requisição: %v\n", err)
+		return
 	}
 	defer resp.Body.Close()
 
@@ -80,6 +83,7 @@ func handleCotacao(w http.ResponseWriter, db *sql.DB) {
 	err = json.Unmarshal(res, &data)
 	if err != nil {
 		fmt.Fprint(os.Stderr, "Erro ao fazer o parse resposta: %v\n", err)
+		return
 	}
 
 	cotacao := Cotacao{
@@ -101,5 +105,6 @@ func salvarCotacao(db *sql.DB, Bid string) {
 	_, err := db.ExecContext(ctxDB, query, Bid)
 	if err != nil {
 		log.Println("Erro ao salvar cotação no banco de dados", err)
+		return
 	}
 }
