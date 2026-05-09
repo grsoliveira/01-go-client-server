@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -42,4 +43,14 @@ func main() {
 	}
 
 	fmt.Printf("A cotação retornada foi de %v", cotacao.Bid)
+
+	content := fmt.Sprintf("Dólar: %s", cotacao.Bid)
+
+	err = os.WriteFile("cotacao.txt", []byte(content), 0644)
+	if err != nil {
+		log.Println("Erro na escrita do arquivo", err)
+		return
+	}
+
+	fmt.Println("Cotação salva com sucesso!")
 }
