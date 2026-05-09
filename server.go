@@ -1,16 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"time"
 )
-
-type Cotacao struct {
-	Bid string `json:bid`
-}
 
 type RetornoApiExterna struct {
 	USDBRL struct {
@@ -18,7 +16,7 @@ type RetornoApiExterna struct {
 	} `json:"USDBRL"`
 }
 
-type CotacaoResponse struct {
+type Cotacao struct {
 	Bid string `json:"bid"`
 }
 
@@ -28,22 +26,36 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
-func handleCotacao(writer http.ResponseWriter, reader *http.Request) {
-	req, err := http.Get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
+func handleCotacao(w http.ResponseWriter, r *http.Request) {
+	ctxAPI, cancelAPI := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancelAPI()
+
+	req, err := http.NewRequestWithContext(
+		ctxAPI,
+		"GET",
+		"https://economia.awesomeapi.com.br/json/last/USD-BRL",
+		nil)
 	if err != nil {
-		fmt.Fprint(os.Stderr, "Erro ao fazer requisição: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Erro ao criar requisição: %v\n", err)
 	}
-	defer req.Body.Close()
-	res, err := io.ReadAll(req.Body)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Erro ao fazer requisição: %v\n", err)
+	}
+	defer resp.Body.Close()
+
+	res, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Fprint(os.Stderr, "Erro ao ler resposta: %v\n", err)
 	}
+
 	var data RetornoApiExterna
 	err = json.Unmarshal(res, &data)
 	if err != nil {
 		fmt.Fprint(os.Stderr, "Erro ao fazer o parse resposta: %v\n", err)
 	}
 
-	writer.Header().Set("Content-type", "application/json")
-	json.NewEncoder(writer).Encode(CotacaoResponse{Bid: data.USDBRL.Bid})
+	w.Header().Set("Content-type", "application/json")
+	json.NewEncoder(w).Encode(Cotacao{Bid: data.USDBRL.Bid})
 }
